@@ -56,7 +56,9 @@ export async function generateSessionKey(): Promise<{ key: CryptoKey; raw: strin
 }
 
 export async function importSessionKey(raw: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", b64urlDecode(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  const bytes = b64urlDecode(raw);
+  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return crypto.subtle.importKey("raw", buf, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
 async function encryptChunk(key: CryptoKey, plaintext: ArrayBuffer): Promise<ArrayBuffer> {
