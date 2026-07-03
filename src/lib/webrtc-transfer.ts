@@ -51,7 +51,7 @@ function b64urlDecode(str: string): Uint8Array {
 
 export async function generateSessionKey(): Promise<{ key: CryptoKey; raw: string }> {
   const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
-  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key));
+  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key) as ArrayBuffer);
   return { key, raw: b64urlEncode(raw) };
 }
 
