@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Upload, Copy, Check, X, Pause, Play, Link2, Zap } from "lucide-react";
+import { Upload, Copy, Check, X, Pause, Play, Link2, Zap, Lock, Users } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Sender } from "@/lib/webrtc-transfer";
+import { Sender, generateSessionKey } from "@/lib/webrtc-transfer";
 import { formatBytes, formatSpeed, shortCode } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,8 +20,10 @@ export const Route = createFileRoute("/send")({
 function SendPage() {
   const [file, setFile] = useState<File | null>(null);
   const [code, setCode] = useState<string>("");
+  const [keyRaw, setKeyRaw] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [connected, setConnected] = useState(false);
+  const [receivers, setReceivers] = useState(0);
   const [bytes, setBytes] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [done, setDone] = useState(false);
@@ -35,7 +37,10 @@ function SendPage() {
     if (w.__gfFile) { setFile(w.__gfFile); w.__gfFile = undefined; }
   }, []);
 
-  const shareUrl = useMemo(() => (code ? `${window.location.origin}/receive/${code}` : ""), [code]);
+  const shareUrl = useMemo(
+    () => (code && keyRaw ? `${window.location.origin}/receive/${code}#k=${keyRaw}` : ""),
+    [code, keyRaw],
+  );
   const eta = useMemo(() => {
     if (!file || !speed) return "";
     const remaining = file.size - bytes;
@@ -46,13 +51,24 @@ function SendPage() {
   const startShare = async () => {
     if (!file) return toast.error("Pick a file first");
     const c = shortCode(6);
+    const { key, raw } = await generateSessionKey();
     setCode(c);
-    const s = new Sender(c, file, {
+    setKeyRaw(raw);
+    const s = new Sender(c, file, key, {
       onStatus: setStatus,
       onReceiverJoin: () => setConnected(true),
-      onProgress: (b, _t, sp) => { setBytes(b); setSpeed(sp); },
-      onComplete: () => setDone(true),
-      onError: (e) => toast.error(e),
+      onReceiversChange: setReceivers,
+      onProgress: (b: number, _t: number, sp: number) => { setBytes(b); setSpeed(sp); },
+      onComplete: async () => {
+        setDone(true);
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user) {
+          await supabase.from("transfers")
+            .update({ status: "completed", completed_at: new Date().toISOString() })
+            .eq("user_id", u.user.id).eq("short_code", c);
+        }
+      },
+      onError: (e: string) => toast.error(e),
     });
     senderRef.current = s;
     await s.start();
@@ -124,7 +140,11 @@ function SendPage() {
                     {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
-                <div className="mt-4 text-sm text-muted-foreground">Or share the code: <span className="font-mono text-foreground text-lg font-bold gradient-text">{code}</span></div>
+                <div className="mt-4 text-sm text-muted-foreground flex flex-wrap items-center gap-3">
+                  <span>Code: <span className="font-mono text-foreground text-lg font-bold gradient-text">{code}</span></span>
+                  <span className="inline-flex items-center gap-1 text-xs"><Lock className="h-3 w-3 text-accent" /> End-to-end encrypted</span>
+                  <span className="inline-flex items-center gap-1 text-xs"><Users className="h-3 w-3" /> {receivers} connected</span>
+                </div>
               </div>
               <div className="glass rounded-2xl p-3">
                 <QRCodeSVG value={shareUrl} size={140} bgColor="transparent" fgColor="currentColor" />

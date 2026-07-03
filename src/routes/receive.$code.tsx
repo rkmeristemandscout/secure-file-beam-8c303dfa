@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, Lock, ShieldAlert } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Receiver, type TransferMeta } from "@/lib/webrtc-transfer";
+import { Receiver, importSessionKey, type TransferMeta } from "@/lib/webrtc-transfer";
 import { formatBytes, formatSpeed } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -24,21 +24,26 @@ function ReceiveCode() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState<string>("");
   const [started, setStarted] = useState(false);
+  const [keyMissing, setKeyMissing] = useState(false);
   const recvRef = useRef<Receiver | null>(null);
 
   const start = async () => {
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const m = /[#&]k=([^&]+)/.exec(hash);
+    if (!m) { setKeyMissing(true); toast.error("Missing encryption key in link"); return; }
+    const key = await importSessionKey(m[1]);
     setStarted(true);
-    const r = new Receiver(code, {
+    const r = new Receiver(code, key, {
       onStatus: setStatus,
       onMeta: setMeta,
-      onProgress: (b, _t, s) => { setBytes(b); setSpeed(s); },
-      onComplete: (blob, m) => {
+      onProgress: (b: number, _t: number, s: number) => { setBytes(b); setSpeed(s); },
+      onComplete: (blob: Blob, mm: TransferMeta) => {
         const url = URL.createObjectURL(blob);
         setDownloadUrl(url);
-        setDownloadName(m.name);
+        setDownloadName(mm.name);
         toast.success("File received!");
       },
-      onError: (e) => toast.error(e),
+      onError: (e: string) => toast.error(e),
     });
     recvRef.current = r;
     await r.start();
@@ -66,10 +71,21 @@ function ReceiveCode() {
             </div>
           </div>
 
-          {!started && (
+          {!started && !keyMissing && (
             <Button onClick={start} className="w-full mt-8 bg-gradient-to-r from-primary to-accent text-primary-foreground">
               <Download className="h-4 w-4 mr-2" /> Connect to sender
             </Button>
+          )}
+          {keyMissing && (
+            <div className="mt-6 rounded-xl glass p-4 flex items-start gap-3 text-sm">
+              <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
+              <div>Encryption key missing from URL. Ask the sender to share the full link (with the <code className="font-mono">#k=…</code> fragment).</div>
+            </div>
+          )}
+          {started && (
+            <div className="mt-4 text-xs text-muted-foreground inline-flex items-center gap-1">
+              <Lock className="h-3 w-3 text-accent" /> End-to-end encrypted (AES-GCM)
+            </div>
           )}
 
           {started && (
