@@ -92,6 +92,11 @@ export interface ReceiverCallbacks {
   onComplete?: (blob: Blob, meta: TransferMeta) => void;
   onError?: (err: string) => void;
   onStatus?: (s: string) => void;
+  // Optional streaming sink: when provided, decrypted chunks are written to
+  // this stream instead of being buffered into a Blob. Used for very large
+  // files to avoid running out of memory. The receiver still calls
+  // onComplete with an empty Blob after closing the writer.
+  writer?: WritableStreamDefaultWriter<Uint8Array>;
 }
 
 function channelName(code: string) {
@@ -322,15 +327,30 @@ export class Receiver {
         this.cb.onMeta?.(msg.meta);
         this.cb.onStatus?.("Receiving…");
       } else if (msg.kind === "done") {
-        const blob = new Blob(this.chunks, { type: this.meta?.type });
         this.cb.onProgress?.(this.received, this.meta?.size || this.received, 0);
-        this.cb.onComplete?.(blob, this.meta!);
+        if (this.cb.writer) {
+          try { await this.cb.writer.close(); } catch {}
+          this.cb.onComplete?.(new Blob([], { type: this.meta?.type }), this.meta!);
+        } else {
+          const blob = new Blob(this.chunks, { type: this.meta?.type });
+          this.chunks = [];
+          this.cb.onComplete?.(blob, this.meta!);
+        }
         this.cb.onStatus?.("Transfer complete");
       }
       return;
     }
     const plain = await decryptChunk(this.key, data);
-    this.chunks.push(plain);
+    if (this.cb.writer) {
+      try {
+        await this.cb.writer.write(new Uint8Array(plain));
+      } catch (err) {
+        this.cb.onError?.((err as Error)?.message || "Write error");
+        return;
+      }
+    } else {
+      this.chunks.push(plain);
+    }
     this.received += plain.byteLength;
     const now = performance.now();
     if (now - this.lastReport > 200) {
