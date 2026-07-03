@@ -146,8 +146,8 @@ function SendPage() {
                   <span className="inline-flex items-center gap-1 text-xs"><Users className="h-3 w-3" /> {receivers} connected</span>
                 </div>
               </div>
-              <div className="glass rounded-2xl p-3">
-                <QRCodeSVG value={shareUrl} size={140} bgColor="transparent" fgColor="currentColor" />
+              <div className="rounded-2xl p-3 bg-white">
+                <QRCodeSVG value={shareUrl} size={160} bgColor="#ffffff" fgColor="#000000" level="M" includeMargin={false} />
               </div>
             </div>
 
