@@ -297,6 +297,8 @@ export class Receiver {
   private received = 0;
   private lastReport = 0;
   private lastBytes = 0;
+  private remoteSet = false;
+  private pendingIce: RTCIceCandidateInit[] = [];
 
   constructor(code: string, key: CryptoKey, cb: ReceiverCallbacks) {
     this.code = code;
@@ -307,43 +309,67 @@ export class Receiver {
 
   async start() {
     this.cb.onStatus?.("Connecting to sender…");
-    this.ch = supabase.channel(channelName(this.code), { config: { broadcast: { ack: false } } });
+    this.ch = supabase.channel(channelName(this.code), {
+      config: { broadcast: { self: false, ack: false } },
+    });
     this.pc = new RTCPeerConnection(ICE);
     this.pc.onicecandidate = (e) => {
-      if (e.candidate) this.ch?.send({ type: "broadcast", event: "ice", payload: { to: this.id, from: this.id, candidate: e.candidate } });
+      if (e.candidate) this.ch?.send({ type: "broadcast", event: "ice", payload: { to: this.id, from: this.id, candidate: e.candidate.toJSON() } });
     };
     this.pc.oniceconnectionstatechange = () => {
+      console.log("[gf:recv] ice state", this.pc?.iceConnectionState);
       if (this.pc?.iceConnectionState === "failed") this.cb.onStatus?.("Connection lost — waiting for retry…");
     };
+    this.pc.onconnectionstatechange = () => console.log("[gf:recv] pc state", this.pc?.connectionState);
     this.pc.ondatachannel = (e) => {
+      console.log("[gf:recv] data channel received");
       const dc = e.channel;
       dc.binaryType = "arraybuffer";
+      dc.onopen = () => { console.log("[gf:recv] data channel open"); this.cb.onStatus?.("Receiving…"); };
       dc.onmessage = (ev) => { this.handleMessage(ev.data).catch((err) => this.cb.onError?.(err?.message || "Decrypt error")); };
       dc.onerror = () => this.cb.onError?.("Data channel error");
     };
     this.ch.on("broadcast", { event: "offer" }, async ({ payload }) => {
       if (payload.to !== this.id) return;
+      console.log("[gf:recv] offer received");
       try {
         await this.pc!.setRemoteDescription(payload.sdp);
+        this.remoteSet = true;
+        for (const c of this.pendingIce.splice(0)) {
+          try { await this.pc!.addIceCandidate(c); } catch (e) { console.warn("[gf:recv] queued ice failed", e); }
+        }
         const ans = await this.pc!.createAnswer();
         await this.pc!.setLocalDescription(ans);
-        this.ch!.send({ type: "broadcast", event: "answer", payload: { to: this.id, sdp: ans } });
+        await this.ch!.send({ type: "broadcast", event: "answer", payload: { to: this.id, sdp: ans } });
+        console.log("[gf:recv] answer sent");
       } catch (err) { this.cb.onError?.((err as Error)?.message || "Negotiation failed"); }
     });
     this.ch.on("broadcast", { event: "ice" }, async ({ payload }) => {
       if (payload.to !== this.id || !payload.candidate) return;
-      try { await this.pc?.addIceCandidate(payload.candidate); } catch {}
+      if (!this.remoteSet) { this.pendingIce.push(payload.candidate); return; }
+      try { await this.pc?.addIceCandidate(payload.candidate); } catch (e) { console.warn("[gf:recv] ice failed", e); }
     });
-    await new Promise<void>((resolve) => this.ch!.subscribe((status) => {
+    await new Promise<void>((resolve, reject) => this.ch!.subscribe((status, err) => {
+      console.log("[gf:recv] channel status", status);
       if (status === "SUBSCRIBED") resolve();
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") reject(err ?? new Error(status));
     }));
-    this.ch.send({ type: "broadcast", event: "join", payload: { id: this.id } });
+    // Small delay + retry so the sender's join listener is definitely wired.
+    for (let i = 0; i < 5; i++) {
+      console.log("[gf:recv] sending join (attempt", i + 1, ")");
+      await this.ch.send({ type: "broadcast", event: "join", payload: { id: this.id } });
+      // If we've received an offer already, stop retrying.
+      await new Promise((r) => setTimeout(r, 1500));
+      if (this.remoteSet) break;
+    }
+    if (!this.remoteSet) this.cb.onStatus?.("Waiting for sender… make sure the sender tab is open.");
   }
 
   private async handleMessage(data: ArrayBuffer | string) {
     if (typeof data === "string") {
       const msg = JSON.parse(data);
       if (msg.kind === "meta") {
+        console.log("[gf:recv] meta received", msg.meta);
         this.meta = msg.meta;
         this.lastReport = performance.now();
         this.cb.onMeta?.(msg.meta);
