@@ -112,6 +112,8 @@ interface PeerSlot {
   bytes: number;
   cancelled: boolean;
   restartAttempts: number;
+  remoteSet: boolean;
+  pendingIce: RTCIceCandidateInit[];
 }
 
 export class Sender {
@@ -135,28 +137,46 @@ export class Sender {
 
   async start() {
     this.cb.onStatus?.("Waiting for receiver…");
-    this.ch = supabase.channel(channelName(this.code), { config: { broadcast: { ack: false } } });
+    this.ch = supabase.channel(channelName(this.code), {
+      config: { broadcast: { self: false, ack: false }, presence: { key: "sender" } },
+    });
 
     this.ch.on("broadcast", { event: "join" }, async ({ payload }) => {
       const id = String(payload?.id ?? "");
       if (!id || this.peers.has(id)) return;
+      console.log("[gf:sender] join from", id);
       this.cb.onReceiverJoin?.();
       this.cb.onStatus?.("Receiver connected — negotiating…");
       await this.spinUpPeer(id);
     });
     this.ch.on("broadcast", { event: "answer" }, async ({ payload }) => {
       const slot = this.peers.get(payload.to);
-      if (slot) { try { await slot.pc.setRemoteDescription(payload.sdp); } catch {} }
+      if (!slot) return;
+      try {
+        await slot.pc.setRemoteDescription(payload.sdp);
+        slot.remoteSet = true;
+        for (const c of slot.pendingIce.splice(0)) {
+          try { await slot.pc.addIceCandidate(c); } catch (e) { console.warn("[gf:sender] queued ice failed", e); }
+        }
+        console.log("[gf:sender] answer applied for", payload.to);
+      } catch (e) {
+        console.error("[gf:sender] setRemoteDescription(answer) failed", e);
+      }
     });
     this.ch.on("broadcast", { event: "ice" }, async ({ payload }) => {
       const slot = this.peers.get(payload.to);
-      if (slot && payload.candidate) { try { await slot.pc.addIceCandidate(payload.candidate); } catch {} }
+      if (!slot || !payload.candidate) return;
+      if (!slot.remoteSet) { slot.pendingIce.push(payload.candidate); return; }
+      try { await slot.pc.addIceCandidate(payload.candidate); } catch (e) { console.warn("[gf:sender] ice failed", e); }
     });
     this.ch.on("broadcast", { event: "bye" }, ({ payload }) => this.dropPeer(payload?.id));
 
-    await new Promise<void>((resolve) => this.ch!.subscribe((status) => {
+    await new Promise<void>((resolve, reject) => this.ch!.subscribe((status, err) => {
+      console.log("[gf:sender] channel status", status);
       if (status === "SUBSCRIBED") resolve();
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") reject(err ?? new Error(status));
     }));
+    console.log("[gf:sender] channel ready, code=", this.code);
   }
 
   private emitReceiverCount() {
@@ -176,7 +196,7 @@ export class Sender {
 
   private async spinUpPeer(id: string) {
     const pc = new RTCPeerConnection(ICE);
-    const slot: PeerSlot = { id, pc, done: false, bytes: 0, cancelled: false, restartAttempts: 0 };
+    const slot: PeerSlot = { id, pc, done: false, bytes: 0, cancelled: false, restartAttempts: 0, remoteSet: false, pendingIce: [] };
     this.peers.set(id, slot);
     this.emitReceiverCount();
 
@@ -202,6 +222,7 @@ export class Sender {
     dc.binaryType = "arraybuffer";
     dc.bufferedAmountLowThreshold = BUFFER_LOW;
     dc.onopen = async () => {
+      console.log("[gf:sender] data channel open");
       dc.send(JSON.stringify({ kind: "meta", meta: this.meta }));
       this.runSendLoop(slot).catch((e) => this.cb.onError?.(e?.message || "Transfer error"));
     };
@@ -209,7 +230,8 @@ export class Sender {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    this.ch?.send({ type: "broadcast", event: "offer", payload: { to: id, sdp: offer } });
+    console.log("[gf:sender] sending offer to", id);
+    await this.ch?.send({ type: "broadcast", event: "offer", payload: { to: id, sdp: offer } });
   }
 
   private async runSendLoop(slot: PeerSlot) {
