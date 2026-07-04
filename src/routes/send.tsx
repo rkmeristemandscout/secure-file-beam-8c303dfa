@@ -12,11 +12,6 @@ import { Sender, generateSessionKey } from "@/lib/webrtc-transfer";
 import { formatBytes, formatSpeed, shortCode } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 
-function isPreviewHost() {
-  if (typeof window === "undefined") return false;
-  return /(-preview--|lovableproject\.com|lovable\.dev)/i.test(window.location.hostname);
-}
-
 export const Route = createFileRoute("/send")({
   head: () => ({ meta: [{ title: "Send a file — GrantFile" }, { name: "description", content: "Share a file peer-to-peer over WebRTC." }] }),
   component: SendPage,
@@ -155,11 +150,6 @@ function SendPage() {
                 <QRCodeSVG value={shareUrl} size={160} bgColor="#ffffff" fgColor="#000000" level="M" includeMargin={false} />
               </div>
             </div>
-              {isPreviewHost() && (
-                <div className="rounded-xl glass p-3 text-xs text-muted-foreground">
-                  ⚠️ You're in preview mode. This QR code points to the preview URL and requires a Lovable login on mobile. Publish the site to get a scannable production URL.
-                </div>
-              )}
 
             <div>
               <div className="flex items-center justify-between text-sm mb-2">
