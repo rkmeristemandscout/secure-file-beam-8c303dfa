@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Activity, Bell, FileText, Link2, Trash2, TrendingUp, Zap, User as UserIcon } from "lucide-react";
+import { Activity, Bell, Copy, FileText, Link2, RefreshCw, Trash2, TrendingUp, Zap, User as UserIcon } from "lucide-react";
 import { formatBytes } from "@/lib/format";
 import type { User } from "@supabase/supabase-js";
 
@@ -97,6 +97,33 @@ function Dashboard() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
 
+  const copyLink = async (code: string) => {
+    const url = `${window.location.origin}/receive/${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
+  const refresh = async () => {
+    if (!user) return;
+    setLoading(true);
+    const [p, l, t, n] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("shared_links").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("transfers").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+    ]);
+    setProfile(p.data as Profile | null);
+    setLinks((l.data as ShareRow[] | null) ?? []);
+    setTransfers((t.data as TransferRow[] | null) ?? []);
+    setNotifications((n.data as NotificationRow[] | null) ?? []);
+    setLoading(false);
+    toast.success("Refreshed");
+  };
+
   const stats = {
     total: transfers.length,
     downloads: links.reduce((a, l) => a + l.download_count, 0),
@@ -113,9 +140,14 @@ function Dashboard() {
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back{profile?.display_name ? `, ${profile.display_name}` : ""}.</p>
           </div>
-          <Button onClick={() => navigate({ to: "/send" })} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
-            <Zap className="h-4 w-4 mr-2" /> New transfer
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Refresh
+            </Button>
+            <Button onClick={() => navigate({ to: "/send" })} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
+              <Zap className="h-4 w-4 mr-2" /> New transfer
+            </Button>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -147,6 +179,9 @@ function Dashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${l.is_active ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>{l.is_active ? "Active" : "Disabled"}</span>
+                        <Button variant="outline" size="sm" onClick={() => copyLink(l.short_code)}>
+                          <Copy className="h-4 w-4 mr-1" /> Copy
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => toggleLink(l)}>{l.is_active ? "Disable" : "Enable"}</Button>
                         <Confirm title="Delete link?" desc="This share link will stop working immediately." onConfirm={() => deleteLink(l.id)}>
                           <Button variant="outline" size="icon" aria-label="Delete link"><Trash2 className="h-4 w-4" /></Button>
