@@ -116,7 +116,7 @@ function SendPage() {
         {!code && (
           <Card className="glass-strong p-8">
             <label className="block cursor-pointer">
-              <input type="file" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <input id="gf-file-input" name="file" type="file" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               <div className="rounded-2xl border-2 border-dashed border-border/60 p-12 text-center hover:border-primary/60 transition-colors">
                 <Upload className="h-10 w-10 mx-auto text-accent" />
                 <div className="mt-3 font-medium">{file ? file.name : "Click to pick a file"}</div>

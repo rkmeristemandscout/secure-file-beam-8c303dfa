@@ -26,7 +26,7 @@ function ReceiveEntry() {
             onSubmit={(e) => { e.preventDefault(); if (code.trim()) navigate({ to: "/receive/$code", params: { code: code.trim().toUpperCase() } }); }}
             className="mt-6 space-y-3"
           >
-            <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. AB4XZ9" className="text-center font-mono text-2xl tracking-widest h-14" maxLength={12} />
+            <Input id="receive-code" name="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. AB4XZ9" className="text-center font-mono text-2xl tracking-widest h-14" maxLength={12} />
             <Button type="submit" className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground">
               <Download className="h-4 w-4 mr-2" /> Connect
             </Button>

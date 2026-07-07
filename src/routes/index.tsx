@@ -74,7 +74,7 @@ function Landing() {
               <p className="text-sm text-muted-foreground mt-1">or choose one from your device</p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <label className="cursor-pointer">
-                  <input type="file" className="sr-only" onChange={onPick} multiple={false} />
+                  <input id="gf-hero-file" name="file" type="file" className="sr-only" onChange={onPick} multiple={false} />
                   <span className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg" style={{ background: "var(--gradient-primary)" }}>
                     <Upload className="h-4 w-4" /> Choose file
                   </span>
