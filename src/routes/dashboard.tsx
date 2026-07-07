@@ -244,7 +244,7 @@ function Dashboard() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Email</Label>
-                  <Input value={profile?.email ?? user?.email ?? ""} disabled />
+                  <Input id="profile-email" name="email" value={profile?.email ?? user?.email ?? ""} disabled />
                 </div>
                 <Button onClick={saveProfile} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">Save changes</Button>
               </div>
