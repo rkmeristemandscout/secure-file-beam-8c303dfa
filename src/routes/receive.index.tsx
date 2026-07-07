@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
-export const Route = createFileRoute("/receive")({
+export const Route = createFileRoute("/receive/")({
   head: () => ({ meta: [{ title: "Receive a file — GrantFile" }] }),
   component: ReceiveEntry,
 });

@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SendRouteImport } from './routes/send'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ReceiveRouteImport } from './routes/receive'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReceiveIndexRouteImport } from './routes/receive.index'
 import { Route as ReceiveCodeRouteImport } from './routes/receive.$code'
 
 const SendRoute = SendRouteImport.update({
@@ -25,11 +25,6 @@ const SendRoute = SendRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReceiveRoute = ReceiveRouteImport.update({
-  id: '/receive',
-  path: '/receive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -47,39 +42,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReceiveIndexRoute = ReceiveIndexRouteImport.update({
+  id: '/receive/',
+  path: '/receive/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReceiveCodeRoute = ReceiveCodeRouteImport.update({
-  id: '/$code',
-  path: '/$code',
-  getParentRoute: () => ReceiveRoute,
+  id: '/receive/$code',
+  path: '/receive/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/receive': typeof ReceiveRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/receive/': typeof ReceiveIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/receive': typeof ReceiveRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/receive': typeof ReceiveIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/receive': typeof ReceiveRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/receive/': typeof ReceiveIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,37 +87,38 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
-    | '/receive'
     | '/reset-password'
     | '/send'
     | '/receive/$code'
+    | '/receive/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/dashboard'
-    | '/receive'
     | '/reset-password'
     | '/send'
     | '/receive/$code'
+    | '/receive'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/dashboard'
-    | '/receive'
     | '/reset-password'
     | '/send'
     | '/receive/$code'
+    | '/receive/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
-  ReceiveRoute: typeof ReceiveRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SendRoute: typeof SendRoute
+  ReceiveCodeRoute: typeof ReceiveCodeRoute
+  ReceiveIndexRoute: typeof ReceiveIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -134,13 +135,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/receive': {
-      id: '/receive'
-      path: '/receive'
-      fullPath: '/receive'
-      preLoaderRoute: typeof ReceiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -164,34 +158,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/receive/': {
+      id: '/receive/'
+      path: '/receive'
+      fullPath: '/receive/'
+      preLoaderRoute: typeof ReceiveIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/receive/$code': {
       id: '/receive/$code'
-      path: '/$code'
+      path: '/receive/$code'
       fullPath: '/receive/$code'
       preLoaderRoute: typeof ReceiveCodeRouteImport
-      parentRoute: typeof ReceiveRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface ReceiveRouteChildren {
-  ReceiveCodeRoute: typeof ReceiveCodeRoute
-}
-
-const ReceiveRouteChildren: ReceiveRouteChildren = {
-  ReceiveCodeRoute: ReceiveCodeRoute,
-}
-
-const ReceiveRouteWithChildren =
-  ReceiveRoute._addFileChildren(ReceiveRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
-  ReceiveRoute: ReceiveRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SendRoute: SendRoute,
+  ReceiveCodeRoute: ReceiveCodeRoute,
+  ReceiveIndexRoute: ReceiveIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
