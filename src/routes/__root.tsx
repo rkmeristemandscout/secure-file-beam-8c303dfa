@@ -82,10 +82,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "GrantFile — Share files instantly. Directly. Securely." },
       { name: "description", content: "GrantFile is a peer-to-peer file sharing platform. End-to-end encrypted browser transfers with no size limits and no accounts required." },
       { name: "author", content: "GrantFile" },
-      { property: "og:title", content: "GrantFile — Peer-to-peer file sharing" },
-      { property: "og:description", content: "Share files instantly and securely, browser to browser. End-to-end encrypted WebRTC transfers." },
+      { property: "og:title", content: "GrantFile — Share files instantly. Directly. Securely." },
+      { property: "og:description", content: "GrantFile is a peer-to-peer file sharing platform. End-to-end encrypted browser transfers with no size limits and no accounts required." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "GrantFile — Share files instantly. Directly. Securely." },
+      { name: "twitter:description", content: "GrantFile is a peer-to-peer file sharing platform. End-to-end encrypted browser transfers with no size limits and no accounts required." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/56aaaba7-8209-4aed-8344-24549d87e49b/id-preview-192f44c3--708c0a95-337c-48b0-b372-94e7292312cb.lovable.app-1783361737729.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/56aaaba7-8209-4aed-8344-24549d87e49b/id-preview-192f44c3--708c0a95-337c-48b0-b372-94e7292312cb.lovable.app-1783361737729.png" },
     ],
     links: [
       {
