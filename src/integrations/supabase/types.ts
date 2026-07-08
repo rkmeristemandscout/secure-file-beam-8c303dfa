@@ -185,6 +185,7 @@ export type Database = {
       shared_links: {
         Row: {
           created_at: string
+          deleted_at: string | null
           download_count: number
           expires_at: string | null
           file_name: string
@@ -199,6 +200,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           download_count?: number
           expires_at?: string | null
           file_name: string
@@ -213,6 +215,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           download_count?: number
           expires_at?: string | null
           file_name?: string
