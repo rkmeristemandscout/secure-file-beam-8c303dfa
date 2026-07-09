@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SendRouteImport } from './routes/send'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReceiveIndexRouteImport } from './routes/receive.index'
+import { Route as ChatIndexRouteImport } from './routes/chat.index'
 import { Route as ReceiveCodeRouteImport } from './routes/receive.$code'
+import { Route as ChatThreadIdRouteImport } from './routes/chat.$threadId'
 
 const SendRoute = SendRouteImport.update({
   id: '/send',
@@ -30,6 +33,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -47,19 +55,32 @@ const ReceiveIndexRoute = ReceiveIndexRouteImport.update({
   path: '/receive/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatIndexRoute = ChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatRoute,
+} as any)
 const ReceiveCodeRoute = ReceiveCodeRouteImport.update({
   id: '/receive/$code',
   path: '/receive/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
+  id: '/$threadId',
+  path: '/$threadId',
+  getParentRoute: () => ChatRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/chat': typeof ChatRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/chat/': typeof ChatIndexRoute
   '/receive/': typeof ReceiveIndexRoute
 }
 export interface FileRoutesByTo {
@@ -68,17 +89,22 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/chat': typeof ChatIndexRoute
   '/receive': typeof ReceiveIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/chat': typeof ChatRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/reset-password': typeof ResetPasswordRoute
   '/send': typeof SendRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/receive/$code': typeof ReceiveCodeRoute
+  '/chat/': typeof ChatIndexRoute
   '/receive/': typeof ReceiveIndexRoute
 }
 export interface FileRouteTypes {
@@ -86,10 +112,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/chat'
     | '/dashboard'
     | '/reset-password'
     | '/send'
+    | '/chat/$threadId'
     | '/receive/$code'
+    | '/chat/'
     | '/receive/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -98,22 +127,28 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/reset-password'
     | '/send'
+    | '/chat/$threadId'
     | '/receive/$code'
+    | '/chat'
     | '/receive'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/chat'
     | '/dashboard'
     | '/reset-password'
     | '/send'
+    | '/chat/$threadId'
     | '/receive/$code'
+    | '/chat/'
     | '/receive/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  ChatRoute: typeof ChatRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SendRoute: typeof SendRoute
@@ -144,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -165,6 +207,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReceiveIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/': {
+      id: '/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/receive/$code': {
       id: '/receive/$code'
       path: '/receive/$code'
@@ -172,12 +221,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReceiveCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$threadId': {
+      id: '/chat/$threadId'
+      path: '/$threadId'
+      fullPath: '/chat/$threadId'
+      preLoaderRoute: typeof ChatThreadIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
   }
 }
+
+interface ChatRouteChildren {
+  ChatThreadIdRoute: typeof ChatThreadIdRoute
+  ChatIndexRoute: typeof ChatIndexRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatThreadIdRoute: ChatThreadIdRoute,
+  ChatIndexRoute: ChatIndexRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  ChatRoute: ChatRouteWithChildren,
   DashboardRoute: DashboardRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SendRoute: SendRoute,
