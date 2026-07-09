@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Moon, Sun, Zap, LogOut, LayoutDashboard } from "lucide-react";
+import { Moon, Sun, Zap, LogOut, LayoutDashboard, Bot } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ export function SiteHeader() {
           <a href="/#how" className="hover:text-foreground transition-colors">How it works</a>
           <a href="/#security" className="hover:text-foreground transition-colors">Security</a>
           <a href="/#faq" className="hover:text-foreground transition-colors">FAQ</a>
+          <Link to="/chat" className="hover:text-foreground transition-colors flex items-center gap-1">
+            <Bot className="h-4 w-4" /> AI Chat
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
