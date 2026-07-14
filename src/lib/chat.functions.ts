@@ -54,7 +54,7 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     let assistantText = "";
     try {
       const result = await generateText({
-        model: gateway("openai/gpt-5.5"),
+        model: gateway("google/gemini-2.5-flash"),
         messages,
       });
       assistantText = result.text.trim();
